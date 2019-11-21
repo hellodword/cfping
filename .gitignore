@@ -1,0 +1,10 @@
+.vscode
+.idea
+*.env*
+
+/*.txt
+
+cfping
+
+results
+build
