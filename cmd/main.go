@@ -134,8 +134,13 @@ func main() {
 		ipCount := 0xffffffff >> ones
 		ipInt := IPV4ToInt(ip.To4())
 
-		for ipCount > 0 {
-			rip := IntToIPV4(ipInt + uint32(rand.Intn(int(math.Min(float64(ipCount), float64(*sample))))+1))
+		for ipCount >= 0 {
+			var rip net.IP
+			if ipCount == 0 {
+				rip = IntToIPV4(ipInt)
+			} else {
+				rip = IntToIPV4(ipInt + uint32(rand.Intn(int(math.Min(float64(ipCount), float64(*sample))))+1))
+			}
 			ipCount -= *sample
 			ipInt += uint32(*sample)
 			wg.Add(1)

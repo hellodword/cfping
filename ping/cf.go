@@ -56,7 +56,7 @@ func Cloudflare(ip string) (*Data, error) {
 
 	request.Header.Set("User-Agent", UserAgent)
 
-	ts0 := time.Now()
+	ts := time.Now()
 	response, err := c.Do(request)
 	if err != nil {
 		return nil, err
@@ -65,11 +65,11 @@ func Cloudflare(ip string) (*Data, error) {
 		err = fmt.Errorf("status code %d", response.StatusCode)
 		return nil, err
 	}
-	ts1 := time.Now()
+	delay := time.Since(ts)
 
 	return &Data{
 		IP:    ip,
-		Delay: ts1.UnixMilli() - ts0.UnixMilli(),
+		Delay: delay.Milliseconds(),
 	}, nil
 
 	//defer response.Body.Close()
