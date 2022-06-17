@@ -1,9 +1,9 @@
 # cfping
 
-> ping cloudflare IPs with TLS 1.3 and http/2
+> ping cloudflare IPs with TLS 1.3
 
 ## Summary
-利用 `https://www.cloudflare.com/cdn-cgi/trace` 进行检测，不关注带宽，只关注 https+TLS1.3+http/2 请求的成功与否以及延迟。
+利用 `https://www.cloudflare.com/cdn-cgi/trace` 进行检测，不关注带宽，只关注 https+TLS1.3 请求的成功与否以及延迟。
 
 也不关注延迟具体多少，不去计算 rtt，只关注整体延迟。
 
@@ -18,6 +18,8 @@ Usage
         how many requests for each ip, at least 5 (default 5)
   -head int
         max ip number of output, 0 for all (default 16)
+  -interface string
+
   -output string
         output file path, default stdout
   -sample int

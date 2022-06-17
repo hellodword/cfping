@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/hellodword/cfping/bind"
 )
 
 type Data struct {
@@ -21,16 +23,28 @@ const (
 	Timeout = time.Second
 )
 
-func Cloudflare(ip string) (*Data, error) {
-	dialer := &net.Dialer{
-		Timeout: Timeout,
+func Cloudflare(ip, iFace string) (*Data, error) {
+	var err error
+
+	var dialer *net.Dialer
+
+	if iFace == "" {
+		dialer = &net.Dialer{}
+	} else {
+		dialer, err = bind.NewTCPDialerFromInterface(iFace)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	dialer.Timeout = Timeout
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
 			MaxVersion: tls.VersionTLS13,
 		},
-		ForceAttemptHTTP2: true,
+		ForceAttemptHTTP2: false,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			if addr == "www.cloudflare.com:443" {
 				addr = fmt.Sprintf("%s:443", ip)

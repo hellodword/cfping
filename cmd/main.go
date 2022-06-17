@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/hellodword/cfping/ping"
-	"github.com/panjf2000/ants/v2"
-	"github.com/schollz/progressbar/v3"
 	"math"
 	"math/rand"
 	"net"
@@ -17,6 +14,10 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/hellodword/cfping/ping"
+	"github.com/panjf2000/ants/v2"
+	"github.com/schollz/progressbar/v3"
 )
 
 type SortedData []*ping.Data
@@ -46,6 +47,7 @@ func main() {
 	text := flag.Bool("text", false, "default false and output json")
 	workers := flag.Int("workers", runtime.NumCPU()*10, "default cpu*10")
 	output := flag.String("output", "", "output file path, default stdout")
+	iFace := flag.String("interface", "", "")
 
 	flag.Parse()
 	if *every < 5 {
@@ -78,7 +80,7 @@ func main() {
 		defer bar.Add(1)
 		var datas SortedData
 		for i := 0; i < *every; i++ {
-			if data, err := ping.Cloudflare(ip.(string)); err == nil {
+			if data, err := ping.Cloudflare(ip.(string), *iFace); err == nil {
 				datas = append(datas, data)
 			} else {
 				return
