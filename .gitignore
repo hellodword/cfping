@@ -3,3 +3,6 @@
 cfping
 
 !cidr.txt
+
+*.txt
+.idea

@@ -9,15 +9,17 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"runtime"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/hellodword/cfping/ping"
 	"github.com/panjf2000/ants/v2"
-	"github.com/schollz/progressbar/v3"
 )
 
 type SortedData []*ping.Data
@@ -48,6 +50,9 @@ func main() {
 	workers := flag.Int("workers", runtime.NumCPU()*10, "default cpu*10")
 	output := flag.String("output", "", "output file path, default stdout")
 	iFace := flag.String("interface", "", "")
+	url := flag.String("url", "https://www.cloudflare.com/cdn-cgi/trace", "your url")
+	status := flag.Int("status", http.StatusOK, "status code of your url")
+	timeout := flag.Int("timeout", 1000, "milliseconds")
 
 	flag.Parse()
 	if *every < 5 {
@@ -70,7 +75,11 @@ func main() {
 		writer = f
 	}
 
-	bar := progressbar.Default(1)
+	tmpl := `[{{string . "failed"}}] {{with string . "prefix"}}{{.}} {{end}}{{counters . }} {{bar . }} {{percent . }} {{speed . }} {{rtime . "ETA %s"}}{{with string . "suffix"}} {{.}}{{end}}`
+
+	var failed uint32
+
+	bar := pb.ProgressBarTemplate(tmpl).Start64(0).Add(0).Set("failed", atomic.LoadUint32(&failed))
 
 	var allData SortedData
 	var allLock sync.Mutex
@@ -80,11 +89,13 @@ func main() {
 		defer bar.Add(1)
 		var datas SortedData
 		for i := 0; i < *every; i++ {
-			if data, err := ping.Cloudflare(ip.(string), *iFace); err == nil {
-				datas = append(datas, data)
-			} else {
+			data, err := ping.Cloudflare(*url, ip.(string), *iFace, *status, *timeout)
+			if err != nil {
+				atomic.AddUint32(&failed, 1)
+				bar.Set("failed", atomic.LoadUint32(&failed))
 				return
 			}
+			datas = append(datas, data)
 		}
 		sort.Sort(datas)
 		// 去最高和最低
@@ -147,12 +158,13 @@ func main() {
 			ipInt += uint32(*sample)
 			wg.Add(1)
 			max += 1
-			bar.ChangeMax(max)
+			bar.SetTotal(int64(max))
 			go pool.Invoke(rip.String())
 		}
 	}
 
 	wg.Wait()
+	time.Sleep(time.Millisecond * 100)
 
 	sort.Sort(allData)
 

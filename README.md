@@ -13,21 +13,26 @@
 ```
 Usage
   -cidr string
-        path to cidr file (default "cidr.txt")
+    	path to cidr file (default "cidr.txt")
   -every int
-        how many requests for each ip, at least 5 (default 5)
+    	how many requests for each ip, at least 5 (default 5)
   -head int
-        max ip number of output, 0 for all (default 16)
+    	max ip number of output, 0 for all (default 16)
   -interface string
-
+    	
   -output string
-        output file path, default stdout
+    	output file path, default stdout
   -sample int
-        rand range for picking samples (default 255)
+    	rand range for picking samples (default 255)
+  -status int
+    	status code of your url (default 200)
   -text
-        default false and output json
+    	default false and output json
+  -url string
+    	your url (default "https://www.cloudflare.com/cdn-cgi/trace")
   -workers int
-        default cpu*10
+    	default cpu*10
+
 ```
 
 ## Build
@@ -39,6 +44,19 @@ go build -o cfping ./cmd
 ## Example
 ```shell
 ./cfping -cidr ./cidr.txt -output output.txt -every 5 -sample 255 -head 10 -workers 10 -text
+```
+
+```shell
+mkdir shanghai
+echo "172.64.0.0/13" > ./shanghai/cidr.txt
+
+# 先随机扫一批出来
+./cfping --interface eth0 -url https://your.domain/path -status 200 -cidr ./shanghai/cidr.txt -every 5 -text -output ./shanghai/output31.txt -head 128 -sample 31 -workers 16
+
+# 再精细多次扫描
+sed -i 's/$/\/32/g' ./shanghai/output31.txt
+./cfping --interface eth0 -url https://your.domain/path -status 200 -cidr ./shanghai/output31.txt -every 20 -head 8 -sample 1 -workers 2
+
 ```
 
 ## TODO

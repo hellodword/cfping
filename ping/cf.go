@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hellodword/cfping/bind"
@@ -19,11 +20,9 @@ type Data struct {
 const (
 	// UserAgent default user-agent
 	UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
-	// Timeout we don't need those IPs
-	Timeout = time.Second
 )
 
-func Cloudflare(ip, iFace string) (*Data, error) {
+func Cloudflare(url, ip, iFace string, status int, timeout int) (*Data, error) {
 	var err error
 
 	var dialer *net.Dialer
@@ -37,7 +36,7 @@ func Cloudflare(ip, iFace string) (*Data, error) {
 		}
 	}
 
-	dialer.Timeout = Timeout
+	dialer.Timeout = time.Millisecond * time.Duration(timeout)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -46,24 +45,24 @@ func Cloudflare(ip, iFace string) (*Data, error) {
 		},
 		ForceAttemptHTTP2: false,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == "www.cloudflare.com:443" {
+			if strings.Index(addr, ":443") != -1 {
 				addr = fmt.Sprintf("%s:443", ip)
+				return dialer.DialContext(ctx, network, addr)
 			}
-
-			return dialer.DialContext(ctx, network, addr)
+			return nil, fmt.Errorf("not https")
 		},
 
-		TLSHandshakeTimeout:   Timeout,
-		ExpectContinueTimeout: Timeout,
-		IdleConnTimeout:       Timeout,
-		ResponseHeaderTimeout: Timeout,
+		TLSHandshakeTimeout:   dialer.Timeout,
+		ExpectContinueTimeout: dialer.Timeout,
+		IdleConnTimeout:       dialer.Timeout,
+		ResponseHeaderTimeout: dialer.Timeout,
 	}
 	c := &http.Client{
 		Transport: tr,
-		Timeout:   Timeout,
+		Timeout:   dialer.Timeout * 2,
 	}
 
-	request, err := http.NewRequest(http.MethodGet, "https://www.cloudflare.com/cdn-cgi/trace", nil)
+	request, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +74,8 @@ func Cloudflare(ip, iFace string) (*Data, error) {
 	if err != nil {
 		return nil, err
 	}
-	if response.StatusCode != http.StatusOK {
-		err = fmt.Errorf("status code %d", response.StatusCode)
+	if response.StatusCode != status {
+		err = fmt.Errorf("expected status code %d but got %d", status, response.StatusCode)
 		return nil, err
 	}
 	delay := time.Since(ts)
